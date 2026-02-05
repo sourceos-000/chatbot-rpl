@@ -344,51 +344,76 @@ global $EMOJI_LIST;
             document.getElementById('typingIndicator').classList.add('hidden');
         }
 
-        function addMessageToChat(sender, message, isImage = false) {
-            const chatContainer = document.getElementById('chatContainer');
-            const time = new Date().toLocaleTimeString('id-ID', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            let messageHTML = '';
-            
-            if (sender === 'user') {
-                messageHTML = `
-                    <div class="flex justify-end mb-4">
-                        <div class="flex flex-col items-end max-w-[80%]">
-                            <div class="bg-chat-primary text-white rounded-2xl rounded-br-none p-4 mb-1">
-                                ${isImage ? 
-                                    `<img src="${message}" alt="Uploaded" class="max-w-full h-auto rounded-lg">` : 
-                                    `<p class="break-words">${message}</p>`
-                                }
-                            </div>
-                            <span class="text-xs text-gray-500">${time} • Anda</span>
-                        </div>
-                        <div class="w-8 h-8 rounded-full bg-chat-primary flex items-center justify-center ml-3 flex-shrink-0">
-                            <i class="fas fa-user text-white text-sm"></i>
-                        </div>
+        function addMessageToChat(sender, message, isImage = false, isGif = false) {
+    const chatContainer = document.getElementById('chatContainer');
+    const time = new Date().toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    let messageHTML = '';
+    
+    if (sender === 'user') {
+        messageHTML = `
+            <div class="flex justify-end mb-4">
+                <div class="flex flex-col items-end max-w-[80%]">
+                    <div class="bg-chat-primary text-white rounded-2xl rounded-br-none p-4 mb-1">
+                        ${isImage ? 
+                            `<img src="${message}" alt="Uploaded" class="max-w-full h-auto rounded-lg max-h-64">` : 
+                            `<p class="break-words">${message}</p>`
+                        }
                     </div>
-                `;
-            } else {
-                messageHTML = `
-                    <div class="flex mb-4">
-                        <div class="w-8 h-8 rounded-full bg-chat-primary flex items-center justify-center mr-3 flex-shrink-0">
-                            <i class="fas fa-robot text-white text-sm"></i>
-                        </div>
-                        <div class="flex flex-col max-w-[80%]">
-                            <div class="bg-gray-100 rounded-2xl rounded-tl-none p-4 mb-1">
-                                <p class="break-words text-gray-800">${message}</p>
-                            </div>
-                            <span class="text-xs text-gray-500">${time} • Chatbot</span>
-                        </div>
+                    <span class="text-xs text-gray-500">${time} • Anda</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-chat-primary flex items-center justify-center ml-3 flex-shrink-0">
+                    <i class="fas fa-user text-white text-sm"></i>
+                </div>
+            </div>
+        `;
+    } else {
+        // JIKA ADA GIF
+        if (isGif) {
+            messageHTML = `
+                <div class="flex mb-4">
+                    <div class="w-8 h-8 rounded-full bg-chat-primary flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-robot text-white text-sm"></i>
                     </div>
-                `;
-            }
-            
-            chatContainer.insertAdjacentHTML('beforeend', messageHTML);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+                    <div class="flex flex-col max-w-[80%]">
+                        <div class="bg-gray-100 rounded-2xl rounded-tl-none p-4 mb-1">
+                            <p class="break-words text-gray-800 mb-2">${message}</p>
+                            <div class="mt-2">
+                                <img src="${isGif}" alt="GIF" class="rounded-lg max-w-full h-auto max-h-64">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-external-link-alt mr-1"></i>
+                                    GIF dari Giphy API
+                                </p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-500">${time} • Chatbot</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            // TANPA GIF
+            messageHTML = `
+                <div class="flex mb-4">
+                    <div class="w-8 h-8 rounded-full bg-chat-primary flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-robot text-white text-sm"></i>
+                    </div>
+                    <div class="flex flex-col max-w-[80%]">
+                        <div class="bg-gray-100 rounded-2xl rounded-tl-none p-4 mb-1">
+                            <p class="break-words text-gray-800">${message}</p>
+                        </div>
+                        <span class="text-xs text-gray-500">${time} • Chatbot</span>
+                    </div>
+                </div>
+            `;
         }
+    }
+    
+    chatContainer.insertAdjacentHTML('beforeend', messageHTML);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
 
         // ============================================
         // HANDLE FORM SUBMIT
@@ -429,36 +454,41 @@ global $EMOJI_LIST;
             showTypingIndicator();
             
             try {
-                // Prepare form data
-                const formData = new FormData();
-                if (message) formData.append('message', message);
-                if (selectedFile) formData.append('image', selectedFile);
-                
-                // Kirim ke server menggunakan Fetch API
-                const response = await fetch('process.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                // Sembunyikan typing indicator
-                hideTypingIndicator();
-                
-                if (result.success) {
-                    // Tampilkan respons dari bot
-                    setTimeout(() => {
-                        addMessageToChat('bot', result.reply);
-                    }, 500);
-                } else {
-                    addMessageToChat('bot', 'Maaf, terjadi kesalahan: ' + result.error);
-                }
-                
-            } catch (error) {
-                hideTypingIndicator();
-                addMessageToChat('bot', 'Maaf, terjadi kesalahan koneksi. Silakan coba lagi.');
-                console.error('Error:', error);
+    // Prepare form data
+    const formData = new FormData();
+    if (message) formData.append('message', message);
+    
+    // Kirim ke server
+    const response = await fetch('process.php', {
+        method: 'POST',
+        body: formData
+    });
+    
+    const result = await response.json();
+    
+    // Sembunyikan typing indicator
+    hideTypingIndicator();
+    
+    if (result.success) {
+        // Tampilkan respons dari bot
+        setTimeout(() => {
+            if (result.gif_url) {
+                // Jika ada GIF, tampilkan dengan GIF
+                addMessageToChat('bot', result.reply, false, result.gif_url);
+            } else {
+                // Jika tidak ada GIF, tampilkan normal
+                addMessageToChat('bot', result.reply);
             }
+        }, 500);
+    } else {
+        addMessageToChat('bot', 'Maaf, terjadi kesalahan: ' + result.error);
+    }
+    
+} catch (error) {
+    hideTypingIndicator();
+    addMessageToChat('bot', 'Maaf, terjadi kesalahan koneksi. Silakan coba lagi.');
+    console.error('Error:', error);
+}
             
             selectedFile = null;
         });
@@ -482,6 +512,51 @@ global $EMOJI_LIST;
                 hideEmojiPicker();
             }
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+    // Tambah contoh command di input placeholder
+    const input = document.getElementById('messageInput');
+    const examples = [
+        "Ketik 'gif kucing' untuk GIF lucu",
+        "Coba 'gif meme'",
+        "Tanya 'Apa itu PHP?'",
+        "Ketik 'gif anjing'"
+    ];
+    
+    let exampleIndex = 0;
+    
+    // Rotasi placeholder setiap 5 detik
+    setInterval(() => {
+        input.placeholder = examples[exampleIndex];
+        exampleIndex = (exampleIndex + 1) % examples.length;
+    }, 5000);
+    
+    // Tambah tombol contoh cepat
+    const quickExamples = document.createElement('div');
+    quickExamples.className = 'flex flex-wrap gap-2 mb-3';
+    quickExamples.innerHTML = `
+        <span class="text-sm text-gray-600">Coba ketik:</span>
+        <button onclick="setExample('gif kucing')" class="text-xs bg-chat-secondary text-white px-3 py-1 rounded-full hover:bg-[#7a9673] transition">
+            gif kucing
+        </button>
+        <button onclick="setExample('Apa itu PHP?')" class="text-xs bg-chat-secondary text-white px-3 py-1 rounded-full hover:bg-[#7a9673] transition">
+            Apa itu PHP?
+        </button>
+        <button onclick="setExample('gif meme lucu')" class="text-xs bg-chat-secondary text-white px-3 py-1 rounded-full hover:bg-[#7a9673] transition">
+            gif meme lucu
+        </button>
+    `;
+    
+    // Sisipkan sebelum form
+    const form = document.getElementById('chatForm');
+    form.parentNode.insertBefore(quickExamples, form);
+});
+
+// Fungsi untuk set contoh
+function setExample(text) {
+    document.getElementById('messageInput').value = text;
+    document.getElementById('messageInput').focus();
+}
 
         // ============================================
         // INISIALISASI
